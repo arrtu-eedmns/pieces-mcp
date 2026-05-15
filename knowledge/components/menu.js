@@ -130,13 +130,17 @@ Usar piece-badge dentro do piece-menu-trailing (sem position:absolute):
 </div>`,
 
     notes: [
-        "Background principal do menu: background-color-auto-00 (não 02)",
+        "piece-surface background-color-auto-00 vai no <ul>, NÃO no .piece-menu",
+        "Em piece-gap, cada <ul> tem seu próprio piece-surface — o container piece-menu fica sem ele",
+        "Itens simples (li): background-color-auto-00 background-color-auto-01-hover",
+        "Itens com seleção (label): adicionar background-color-auto-06-active background-color-auto-07-hover-active",
+        "Trailing text usa text-color-auto-14 para destaque sutil",
+        "Badge fica inline no flex row ANTES do trailing text — NÃO dentro do piece-menu-trailing",
+        "user-select: none já aplicado via CSS nos itens",
         "Max-width: 280px por padrão",
-        "Altura dos itens: 48px fixo",
-        "Font-size dos itens: 14px",
+        "Altura dos itens: 48px fixo, font-size: 14px",
         "Box-shadow: 0 0 4px 1px hsla(0,0%,0%,0.25) — não usa o sistema de cores pieces",
         "Fora do .piece-interactive, o menu renderiza estático no fluxo — útil para demos",
-        "Para fechar ao clicar fora, usar interactive.js",
     ],
 
     examples: {
