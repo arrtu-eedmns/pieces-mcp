@@ -41,13 +41,41 @@ Sem ícone:
   - :active OFF: 28×28px esticado para a esquerda
   - :active ON:  28×28px esticado para a direita
 
-Com piece-false (ícone no estado off):
+Com piece-false (ícone só no estado OFF):
   - OFF: começa grande (24×24px) — indica que há ação disponível
   - ON:  24×24px, deslocado para a direita
 
-Com apenas piece-true (ícone só no estado on):
+Com apenas piece-true (ícone só no estado ON):
   - OFF: começa pequeno (16×16px)
   - ON:  24×24px com ícone`,
+
+    iconVariants: `
+Existem 4 variantes de ícone — todos vão dentro do .piece-indicator:
+
+── Nenhum ─────────────────────────────────────────────────────────────────────
+<span class="piece-indicator piece-surface piece-parent
+             background-color-auto-12 background-color-auto-00-active"></span>
+
+── Só ON (piece-true) ─────────────────────────────────────────────────────────
+Indicador pequeno no OFF, grande no ON com ícone.
+<span class="piece-indicator piece-surface piece-parent
+             background-color-auto-12 background-color-auto-00-active">
+    <span class="material-symbols-rounded piece-icon piece-true text-color-auto-11" translate="no">check</span>
+</span>
+
+── Só OFF (piece-false) ───────────────────────────────────────────────────────
+Indicador já começa grande no OFF (sinaliza que há ação).
+<span class="piece-indicator piece-surface piece-parent
+             background-color-auto-12 background-color-auto-00-active">
+    <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
+</span>
+
+── Ambos ──────────────────────────────────────────────────────────────────────
+<span class="piece-indicator piece-surface piece-parent
+             background-color-auto-12 background-color-auto-00-active">
+    <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
+    <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-00" translate="no">check</span>
+</span>`,
 
     notes: [
         "Usa <div> como raiz — não <label> nem <button>",
