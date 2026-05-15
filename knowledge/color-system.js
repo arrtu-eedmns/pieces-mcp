@@ -41,11 +41,13 @@ Exemplo com background-color-auto-04 (token 04 = 16%):
   piece-dark  → calc(0%   + 16%) = 16% lightness  (quase preto)`,
 
         usage: `
-<!-- Tema claro fixo -->
-<body class="piece-light">
+<!-- Setup completo recomendado no body: tema + paleta + papel de cor -->
+<body class="piece-surface piece-light piece-primary piece-triade
+             background-color-auto-02 text-color-auto-20">
 
-<!-- Tema escuro fixo -->
-<body class="piece-dark">
+<!-- Tema escuro -->
+<body class="piece-surface piece-dark piece-primary piece-triade
+             background-color-auto-02 text-color-auto-20">
 
 <!-- Trocar tema via JS -->
 document.body.classList.toggle('piece-light')
@@ -53,7 +55,11 @@ document.body.classList.toggle('piece-dark')
 
 <!-- Seguir preferência do sistema -->
 const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
-document.body.classList.add(dark ? 'piece-dark' : 'piece-light')`,
+document.body.classList.add(dark ? 'piece-dark' : 'piece-light')
+
+REGRA: piece-light/dark, piece-primary/secondary/tertiary e piece-triade/analoga/...
+herdam para TODOS os filhos. Não repetir em componentes individuais.
+Só adicionar num elemento específico para criar um override local.`,
 
         notes: [
             "Sem piece-light ou piece-dark no body, NENHUMA cor funciona",
@@ -182,7 +188,10 @@ token × 2 = px de blur
     palettes: {
         description: `
 Define como primary, secondary e tertiary são derivados do HUE principal.
-Aplicado no container raiz junto com piece-light/piece-dark.
+
+REGRA: adicionar no elemento raiz (body) junto com piece-light/piece-dark e piece-primary.
+Herda automaticamente para TODOS os filhos — não repetir em componentes individuais.
+Só adicionar em outro elemento se precisar criar uma sub-seção com paleta diferente.
 `,
         classes: {
             "piece-triade":      "Secondary = primary+120°, tertiary = primary+240° — paleta triádica",
@@ -190,11 +199,34 @@ Aplicado no container raiz junto com piece-light/piece-dark.
             "piece-complementar":"Secondary = primary+120°, tertiary = primary+150° — complementar",
             "piece-mono":        "Todos os três com o mesmo HUE — monocromático",
             "piece-art":         "Preset fixo: primary=270°, secondary=230°, tertiary=300°",
-        }
+        },
+        usage: `
+<!-- Correto: tudo no body, componentes herdam automaticamente -->
+<body class="piece-surface piece-light piece-primary piece-triade ...">
+    <button class="piece-button piece-surface ...">  ← herda piece-primary do body
+    </button>
+</body>
+
+<!-- Errado: repetição desnecessária -->
+<button class="piece-button piece-surface piece-primary ...">  ← redundante
+</button>
+
+<!-- Exceção válida: override local para seção específica -->
+<section class="piece-secondary">
+    <button class="piece-button piece-surface ...">  ← usa secondary nessa seção
+    </button>
+</section>`,
     },
 
     colorRoles: {
-        description: "Aplicado em um elemento para mudar o HUE ativo nele e em seus filhos",
+        description: `
+Muda o HUE ativo (--piece-h) neste elemento e em todos os seus filhos piece-surface.
+
+REGRA: mesma do piece-light/piece-dark — adicionar no body ou container raiz.
+Herda automaticamente. Só adicionar em componente individual se quiser SOBRESCREVER
+o papel de cor para aquele componente (ex: um botão de alerta usando piece-tertiary
+numa página que tem piece-primary no body).
+`,
         classes: {
             "piece-primary":   "--piece-h = --piece-primary   (HUE base)",
             "piece-secondary": "--piece-h = --piece-secondary (HUE base + offset da paleta)",

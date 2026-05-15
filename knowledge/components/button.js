@@ -71,19 +71,23 @@ module.exports = {
     },
 
     toggleBehavior: `
-O piece-button suporta toggle nativo via input[type=checkbox] ou input[type=radio] oculto:
+O piece-button suporta toggle nativo via input[type=checkbox] ou input[type=radio] oculto.
+OBRIGATÓRIO: usar <label> como raiz quando há piece-controller — o input fica display:none
+e sem <label> o clique nunca chega ao input.
 
-<button class="piece-button piece-medium piece-surface ...">
+<label class="piece-button piece-medium piece-surface ...">
     <input type="checkbox" class="piece-controller">
     <span class="material-symbols-rounded piece-icon piece-false" translate="no">favorite_border</span>
     <span class="material-symbols-rounded piece-icon piece-true"  translate="no">favorite</span>
-    <span class="piece-label">Curtir</span>
+    <span class="piece-label piece-false">Curtir</span>
+    <span class="piece-label piece-true">Curtido</span>
     <span class="piece-ripple"></span>
-</button>
+</label>
 
 - piece-false: visível quando NÃO checado
 - piece-true:  visível quando checado
-- Ícone ativo recebe FILL automático via font-variation-settings`,
+- Ícone ativo recebe FILL automático via font-variation-settings
+- piece-label também suporta piece-false/piece-true para trocar o texto`,
 
     groupButton: `
 piece-group-button agrupa botões com bordas adaptadas automaticamente:
@@ -102,70 +106,74 @@ piece-group-button agrupa botões com bordas adaptadas automaticamente:
     notes: [
         "Sempre inclua piece-ripple como último filho",
         "piece-icon é opcional — se presente, fica antes do piece-label",
-        "O HUE da cor vem da classe de paleta: piece-primary, piece-secondary ou piece-tertiary",
-        "background-color-auto-11 usa o HUE do piece-primary/secondary/tertiary — tom de destaque",
+        "piece-primary/secondary/tertiary devem estar no body ou container pai — NÃO repetir em cada botão",
+        "Só adicione piece-secondary/tertiary num botão específico para sobrescrever o papel de cor local",
+        "background-color-auto-11 usa o HUE herdado do ancestral — tom de destaque",
         "Para botão só com ícone, use piece-icon-button (não piece-button)",
         "piece-s-40 NÃO é necessário no button — o tamanho vem das classes de size",
     ],
 
     examples: {
         primaryFilled: `
+<!-- piece-primary está no body — herda automaticamente -->
 <button class="piece-button piece-medium piece-surface
                background-color-auto-11 background-color-auto-12-hover
-               text-color-auto-00 ripple-color-auto-00
-               piece-primary">
+               text-color-auto-00 ripple-color-auto-00">
     <span class="material-symbols-rounded piece-icon" translate="no">save</span>
     <span class="piece-label">Salvar</span>
     <span class="piece-ripple"></span>
 </button>`,
 
         secondaryTonal: `
-<button class="piece-button piece-small piece-surface
+<!-- piece-secondary aqui sobrescreve o HUE só neste botão -->
+<button class="piece-button piece-small piece-surface piece-secondary
                background-color-auto-06 background-color-auto-07-hover
-               text-color-auto-18 ripple-color-auto-18
-               piece-secondary">
+               text-color-auto-18 ripple-color-auto-18">
     <span class="piece-label">Cancelar</span>
     <span class="piece-ripple"></span>
 </button>`,
 
         textButton: `
 <button class="piece-button piece-medium piece-surface piece-text
-               text-color-auto-18 ripple-color-auto-18
-               piece-tertiary">
+               text-color-auto-18 ripple-color-auto-18">
     <span class="piece-label">Ver mais</span>
     <span class="piece-ripple"></span>
 </button>`,
 
         toggleButton: `
-<button class="piece-button piece-medium piece-surface
-               background-color-auto-04 background-color-auto-06-hover
-               background-color-auto-11-active
-               text-color-auto-18 ripple-color-auto-18
-               piece-primary">
+<!-- <label> obrigatório — input fica display:none -->
+<label class="piece-button piece-small piece-surface
+              background-color-auto-04 background-color-auto-06-hover
+              background-color-auto-11-active background-color-auto-12-active-hover
+              text-color-auto-16 text-color-auto-00-active
+              ripple-color-auto-16">
     <input type="checkbox" class="piece-controller">
     <span class="material-symbols-rounded piece-icon piece-false" translate="no">favorite_border</span>
     <span class="material-symbols-rounded piece-icon piece-true"  translate="no">favorite</span>
     <span class="piece-label piece-false">Curtir</span>
     <span class="piece-label piece-true">Curtido</span>
     <span class="piece-ripple"></span>
-</button>`,
+</label>`,
 
         groupButton: `
+<!-- Cada item é <label> para que o radio funcione nativamente -->
 <div class="piece-group-button">
-    <button class="piece-button piece-small piece-surface
-                   background-color-auto-04 background-color-auto-11-active
-                   text-color-auto-18 ripple-color-auto-18 piece-primary">
+    <label class="piece-button piece-small piece-surface
+                  background-color-auto-04 background-color-auto-11-active
+                  text-color-auto-16 text-color-auto-00-active ripple-color-auto-16">
         <input type="radio" name="view" class="piece-controller" checked>
+        <span class="material-symbols-rounded piece-icon" translate="no">view_list</span>
         <span class="piece-label">Lista</span>
         <span class="piece-ripple"></span>
-    </button>
-    <button class="piece-button piece-small piece-surface
-                   background-color-auto-04 background-color-auto-11-active
-                   text-color-auto-18 ripple-color-auto-18 piece-primary">
+    </label>
+    <label class="piece-button piece-small piece-surface
+                  background-color-auto-04 background-color-auto-11-active
+                  text-color-auto-16 text-color-auto-00-active ripple-color-auto-16">
         <input type="radio" name="view" class="piece-controller">
+        <span class="material-symbols-rounded piece-icon" translate="no">grid_view</span>
         <span class="piece-label">Grade</span>
         <span class="piece-ripple"></span>
-    </button>
+    </label>
 </div>`,
     }
 }

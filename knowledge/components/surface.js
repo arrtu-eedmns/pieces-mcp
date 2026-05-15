@@ -33,6 +33,96 @@ module.exports = {
     </div>
 </div>`,
 
+    controllerPattern: `
+O piece-controller é um input que controla o estado ativo do .piece-surface pai.
+Existem DOIS comportamentos dependendo do componente:
+
+── 1. Display none (checkbox, radio, icon-button toggle) ──────────────────────
+  O input fica oculto com display:none.
+  O ELEMENTO RAIZ DEVE SER <label> para que o clique seja encaminhado ao input.
+  Se for <div> ou <button>, o clique nunca chega ao input — o toggle não funciona.
+
+  <label class="piece-checkbox piece-small piece-surface ...">
+      <span class="piece-icon piece-false" ...>check_box_outline_blank</span>
+      <span class="piece-icon piece-true"  ...>check_box</span>
+      <input type="checkbox" class="piece-controller">   ← display:none
+  </label>
+
+── 2. Overlay transparente (switch) ───────────────────────────────────────────
+  O input ocupa 100% do componente com position:absolute; opacity:0.
+  O clique chega ao input diretamente — o elemento raiz pode ser <div>.
+
+  <div class="piece-switch piece-surface ...">
+      <input type="checkbox" class="piece-controller">   ← overlay 100%×100%
+      <span class="piece-indicator ..."></span>
+  </div>
+
+── Checkbox COM texto (legenda) ───────────────────────────────────────────────
+  Usar <label> externo + <span> no lugar do <label> interno:
+
+  <label style="display:flex; gap:8px; align-items:center; cursor:pointer">
+      <span class="piece-checkbox piece-small piece-surface ...">
+          <span class="piece-icon piece-false" ...>check_box_outline_blank</span>
+          <span class="piece-icon piece-true"  ...>check_box</span>
+          <input type="checkbox" class="piece-controller">
+      </span>
+      <span>Aceitar termos</span>
+  </label>
+
+  NUNCA aninhe <label> dentro de <label> — HTML inválido.
+`,
+
+    activeStateMechanisms: `
+Existem DOIS mecanismos para ativar o estado ativo de um .piece-surface.
+Ambos produzem o mesmo resultado visual — ativam as classes -active e piece-true.
+
+── 1. piece-controller (CSS puro, sem JS) ─────────────────────────────────────
+  Um input[type=checkbox] filho com class="piece-controller".
+  Quando checked, o CSS detecta via :has(>.piece-controller:checked) e ativa o estado.
+  Clique nativo do HTML — não precisa de JS para funcionar.
+
+  Quando usar: toggles, checkboxes, switches, qualquer estado que o usuário controla
+               clicando diretamente no componente.
+
+  <label class="piece-icon-button piece-small piece-surface ...">
+      <input type="checkbox" class="piece-controller">   ← controla via clique
+      <span class="piece-icon piece-false">favorite_border</span>
+      <span class="piece-icon piece-true">favorite</span>
+  </label>
+
+── 2. piece-actived (JS, controle externo) ────────────────────────────────────
+  Adicionar/remover a classe "piece-actived" no elemento via JavaScript.
+  O CSS detecta via .piece-actived e ativa o mesmo estado.
+  Não precisa de input — o controle é totalmente via JS.
+
+  Quando usar: item de menu selecionado, aba ativa, item de navegação atual,
+               qualquer estado controlado por lógica da aplicação (não pelo usuário
+               clicando no próprio componente).
+
+  // Ativar
+  element.classList.add('piece-actived')
+
+  // Desativar
+  element.classList.remove('piece-actived')
+
+  <li class="piece-actived piece-surface ...">   ← ativo via JS
+      Item de menu selecionado
+  </li>
+
+── Comparação ─────────────────────────────────────────────────────────────────
+  piece-controller → o próprio componente se controla (usuário clica nele)
+  piece-actived    → a aplicação controla o componente (lógica externa decide)
+
+  Podem coexistir: piece-actived pode ativar um componente que também tem
+  piece-controller, útil para pré-selecionar estados.
+`,
+
+    visualStates: `
+piece-true    → visível quando piece-controller:checked OU piece-actived
+piece-false   → visível quando NÃO checked e NÃO actived
+piece-parent  → filho direto que espelha o estado ativo do pai automaticamente
+`,
+
     examples: {
         card: `
 <div class="piece-surface background-color-auto-04

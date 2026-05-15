@@ -6,25 +6,29 @@ module.exports = {
 
     structure: `
 <!-- Sem ícone -->
-<label class="piece-switch piece-surface
-              background-color-auto-06 border-color-auto-10
-              background-color-auto-11-active border-color-auto-11-active
-              piece-primary">
-    <span class="piece-indicator piece-surface background-color-auto-12 background-color-auto-00-active"></span>
-    <input type="checkbox">
-</label>
+<div class="piece-switch piece-surface piece-primary
+            background-color-auto-04 background-color-auto-05-hover
+            background-color-auto-11-active background-color-auto-12-active-hover
+            border-color-auto-08 border-color-auto-11-active
+            ripple-to-fg ripple-to-accent-active">
+    <input type="checkbox" class="piece-controller">
+    <span class="piece-indicator piece-surface piece-parent
+                 background-color-auto-12 background-color-auto-00-active"></span>
+</div>
 
 <!-- Com ícones -->
-<label class="piece-switch piece-surface
-              background-color-auto-06 border-color-auto-10
-              background-color-auto-11-active border-color-auto-11-active
-              piece-primary">
-    <span class="piece-indicator piece-surface background-color-auto-12 background-color-auto-00-active">
+<div class="piece-switch piece-surface piece-primary
+            background-color-auto-04 background-color-auto-05-hover
+            background-color-auto-11-active background-color-auto-12-active-hover
+            border-color-auto-08 border-color-auto-11-active
+            ripple-to-fg ripple-to-accent-active">
+    <input type="checkbox" class="piece-controller">
+    <span class="piece-indicator piece-surface piece-parent
+                 background-color-auto-12 background-color-auto-00-active">
         <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
         <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-11" translate="no">check</span>
     </span>
-    <input type="checkbox">
-</label>`,
+</div>`,
 
     requiredClasses: ["piece-switch", "piece-surface"],
 
@@ -46,9 +50,13 @@ Com apenas piece-true (ícone só no estado on):
   - ON:  24×24px com ícone`,
 
     notes: [
-        "O input[type=checkbox] deve ser filho direto do .piece-switch — SEM a classe piece-controller",
-        "Diferente de checkbox/radio/button, o switch usa input simples (opacity:0, position:absolute) — não piece-controller",
-        "O input fica invisível mas ocupa 100% da área — é ele que recebe o clique",
+        "Usa <div> como raiz — não <label> nem <button>",
+        "piece-primary é opcional: sem uma classe de paleta (piece-triade etc.) no container, não muda nada visualmente — o hue cai no padrão do :root (248)",
+        "O input DEVE vir ANTES do .piece-indicator no HTML — o CSS usa :has(.piece-controller:checked) para estilizar o indicador",
+        "O input DEVE ter class='piece-controller' — é ele que dispara o estado ativo",
+        "O .piece-indicator DEVE ter piece-parent — espelha o estado ativo do pai",
+        "ripple-to-fg e ripple-to-accent-active controlam a cor do ripple em cada estado",
+        "background-color-auto-05-hover = hover no estado OFF | background-color-auto-12-active-hover = hover no estado ON",
         "piece-false e piece-true dentro do .piece-indicator controlam qual ícone aparece",
         "Usa border-style: solid + border-width: 2px — sempre defina border-color",
         "Transições com cubic-bezier(0.2,0,0,1) — animação suave e física",
@@ -56,26 +64,39 @@ Com apenas piece-true (ícone só no estado on):
 
     examples: {
         simple: `
-<label class="piece-switch piece-surface
-              background-color-auto-06 border-color-auto-10
-              background-color-auto-11-active border-color-auto-11-active
-              piece-primary">
-    <span class="piece-indicator piece-surface
+<div class="piece-switch piece-surface piece-primary
+            background-color-auto-04 background-color-auto-05-hover
+            background-color-auto-11-active background-color-auto-12-active-hover
+            border-color-auto-08 border-color-auto-11-active
+            ripple-to-fg ripple-to-accent-active">
+    <input type="checkbox" class="piece-controller">
+    <span class="piece-indicator piece-surface piece-parent
                  background-color-auto-12 background-color-auto-00-active"></span>
-    <input type="checkbox">
-</label>`,
+</div>`,
+
+        checked: `
+<div class="piece-switch piece-surface piece-primary
+            background-color-auto-04 background-color-auto-05-hover
+            background-color-auto-11-active background-color-auto-12-active-hover
+            border-color-auto-08 border-color-auto-11-active
+            ripple-to-fg ripple-to-accent-active">
+    <input type="checkbox" class="piece-controller" checked>
+    <span class="piece-indicator piece-surface piece-parent
+                 background-color-auto-12 background-color-auto-00-active"></span>
+</div>`,
 
         withIcons: `
-<label class="piece-switch piece-surface
-              background-color-auto-06 border-color-auto-10
-              background-color-auto-11-active border-color-auto-11-active
-              piece-secondary">
-    <span class="piece-indicator piece-surface
+<div class="piece-switch piece-surface piece-secondary
+            background-color-auto-04 background-color-auto-05-hover
+            background-color-auto-11-active background-color-auto-12-active-hover
+            border-color-auto-08 border-color-auto-11-active
+            ripple-to-fg ripple-to-accent-active">
+    <input type="checkbox" class="piece-controller">
+    <span class="piece-indicator piece-surface piece-parent
                  background-color-auto-12 background-color-auto-00-active">
         <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
         <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-00" translate="no">check</span>
     </span>
-    <input type="checkbox">
-</label>`,
+</div>`,
     }
 }

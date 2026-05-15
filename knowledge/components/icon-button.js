@@ -5,7 +5,7 @@ module.exports = {
     description: "Botão quadrado/circular com apenas um ícone. Suporta toggle, narrow/wide e os mesmos tamanhos do button.",
 
     structure: `
-<!-- Simples -->
+<!-- Simples — usa <button> -->
 <button class="piece-icon-button {size} piece-surface
                {background} {background-hover}
                {text-color} {ripple-color}">
@@ -13,13 +13,14 @@ module.exports = {
     <span class="piece-ripple"></span>
 </button>
 
-<!-- Toggle (checkbox) -->
-<button class="piece-icon-button {size} piece-surface ...">
+<!-- Toggle — OBRIGATÓRIO usar <label>, não <button> -->
+<!-- O input fica display:none — sem <label> o clique não chega ao input -->
+<label class="piece-icon-button {size} piece-surface ...">
     <input type="checkbox" class="piece-controller">
     <span class="material-symbols-rounded piece-icon piece-false" translate="no">{icon-off}</span>
     <span class="material-symbols-rounded piece-icon piece-true"  translate="no">{icon-on}</span>
     <span class="piece-ripple"></span>
-</button>`,
+</label>`,
 
     requiredClasses: ["piece-icon-button", "piece-surface"],
 
@@ -63,7 +64,8 @@ Funciona igual ao piece-button — input oculto controla o estado:
         "Não tem piece-label — use piece-button se precisar de texto",
         "O FILL do ícone é ativado automaticamente quando checked/actived",
         "Combine piece-narrow com pill shapes para criar chips/tags clicáveis",
-        "Sem paleta de cor obrigatória — a cor vem direto das classes de text-color",
+        "piece-primary/secondary/tertiary devem estar no body ou container pai — NÃO repetir em cada botão",
+        "Só adicione piece-secondary/tertiary num botão específico para sobrescrever o papel de cor local",
     ],
 
     examples: {
@@ -76,17 +78,18 @@ Funciona igual ao piece-button — input oculto controla o estado:
 </button>`,
 
         toggle: `
-<button class="piece-icon-button piece-small piece-surface
-               background-color-auto-04 background-color-auto-06-hover
-               background-color-auto-11-active
-               text-color-auto-18 text-color-auto-00-active
-               ripple-color-auto-18
-               piece-primary">
+<!-- <label> como raiz — obrigatório para o clique funcionar -->
+<!-- piece-primary herdado do body — background-color-auto-11 usa esse HUE -->
+<label class="piece-icon-button piece-small piece-surface
+              background-color-auto-04 background-color-auto-06-hover
+              background-color-auto-11-active
+              text-color-auto-18 text-color-auto-00-active
+              ripple-color-auto-18">
     <input type="checkbox" class="piece-controller">
     <span class="material-symbols-rounded piece-icon piece-false" translate="no">bookmark_border</span>
     <span class="material-symbols-rounded piece-icon piece-true"  translate="no">bookmark</span>
     <span class="piece-ripple"></span>
-</button>`,
+</label>`,
 
         narrow: `
 <!-- Botão estreito — útil em listas e tabelas -->
