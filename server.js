@@ -10,6 +10,10 @@ const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontext
 // ─── Knowledge base ───────────────────────────────────────────────────────────
 const colorSystem = require('./knowledge/color-system.js')
 
+const core = {
+    cssGenerator: require('./knowledge/core/css-generator.js'),
+}
+
 const styles = {
     notion: require('./knowledge/styles/notion.js'),
 }
@@ -84,6 +88,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             name: 'sistema_de_cores',
             description: 'Retorna documentação completa do sistema de cores do pieces: tokens, surface, alpha, blur, temas, paletas e roles de cor.',
             inputSchema: { type: 'object', properties: {} }
+        },
+        {
+            name: 'buscar_core',
+            description: 'Retorna documentação de arquivos core do pieces (ex: css-generator). Explica como funcionam os scripts fundamentais como o gerador de CSS dinâmico.',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    id: {
+                        type: 'string',
+                        description: 'ID do core (ex: css-generator)'
+                    }
+                },
+                required: ['id']
+            }
         },
         {
             name: 'buscar_estilo',
@@ -241,6 +259,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             Object.entries(colorSystem.states).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
 
         return { content: [{ type: 'text', text: sections.join('\n\n') }] }
+    }
+
+    // ── buscar_core ─────────────────────────────────────────────────────────
+    if (name === 'buscar_core') {
+        const id = args?.id?.toLowerCase().replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+        const item = core[id]
+
+        if (!item) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: `Core "${args?.id}" não encontrado.\n\nDisponíveis: ${Object.keys(core).join(', ')}`
+                }]
+            }
+        }
+
+        const sections = []
+        sections.push(`# ${item.name} — ${item.file}`)
+        sections.push(item.description)
+        if (item.howItWorks)        sections.push(`\n## Como funciona\n${item.howItWorks}`)
+        if (item.classPatterns)     sections.push(`\n## Padrões de classe\n` + Object.entries(item.classPatterns).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
+        if (item.tokenResolution)   sections.push(`\n## Resolução de tokens\n${item.tokenResolution}`)
+        if (item.suffixes)          sections.push(`\n## Sufixos de estado\n${item.suffixes}`)
+        if (item.supportedProperties) sections.push(`\n## Propriedades suportadas\n` + item.supportedProperties.map(p => `• \`${p}\``).join('\n'))
+        if (item.installation)      sections.push(`\n## Instalação\n${item.installation}`)
+        if (item.notes)             sections.push(`\n## Notas\n` + item.notes.map(n => `• ${n}`).join('\n'))
+
+        return { content: [{ type: 'text', text: sections.join('\n') }] }
     }
 
     // ── buscar_estilo ───────────────────────────────────────────────────────
