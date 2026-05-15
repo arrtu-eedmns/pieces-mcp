@@ -25,7 +25,7 @@ module.exports = {
     <input type="checkbox" class="piece-controller">
     <span class="piece-indicator piece-surface piece-parent
                  background-color-auto-12 background-color-auto-00-active">
-        <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
+        <span class="material-symbols-rounded piece-icon piece-false text-color-auto-04" translate="no">close</span>
         <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-11" translate="no">check</span>
     </span>
 </div>`,
@@ -67,14 +67,14 @@ Indicador pequeno no OFF, grande no ON com ícone.
 Indicador já começa grande no OFF (sinaliza que há ação).
 <span class="piece-indicator piece-surface piece-parent
              background-color-auto-12 background-color-auto-00-active">
-    <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
+    <span class="material-symbols-rounded piece-icon piece-false text-color-auto-04" translate="no">close</span>
 </span>
 
 ── Ambos ──────────────────────────────────────────────────────────────────────
 <span class="piece-indicator piece-surface piece-parent
              background-color-auto-12 background-color-auto-00-active">
-    <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
-    <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-00" translate="no">check</span>
+    <span class="material-symbols-rounded piece-icon piece-false text-color-auto-04" translate="no">close</span>
+    <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-11" translate="no">check</span>
 </span>`,
 
     notes: [
@@ -122,8 +122,8 @@ Indicador já começa grande no OFF (sinaliza que há ação).
     <input type="checkbox" class="piece-controller">
     <span class="piece-indicator piece-surface piece-parent
                  background-color-auto-12 background-color-auto-00-active">
-        <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
-        <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-00" translate="no">check</span>
+        <span class="material-symbols-rounded piece-icon piece-false text-color-auto-04" translate="no">close</span>
+        <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-11" translate="no">check</span>
     </span>
 </div>`,
     }
