@@ -10,6 +10,10 @@ const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontext
 // ─── Knowledge base ───────────────────────────────────────────────────────────
 const colorSystem = require('./knowledge/color-system.js')
 
+const styles = {
+    notion: require('./knowledge/styles/notion.js'),
+}
+
 const components = {
     surface:           require('./knowledge/components/surface.js'),
     button:            require('./knowledge/components/button.js'),
@@ -80,6 +84,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             name: 'sistema_de_cores',
             description: 'Retorna documentação completa do sistema de cores do pieces: tokens, surface, alpha, blur, temas, paletas e roles de cor.',
             inputSchema: { type: 'object', properties: {} }
+        },
+        {
+            name: 'buscar_estilo',
+            description: 'Retorna documentação de um estilo/variante visual do pieces (ex: notion). Inclui quais componentes suporta, border-radius, exemplos prontos e notas.',
+            inputSchema: {
+                type: 'object',
+                properties: {
+                    id: {
+                        type: 'string',
+                        description: 'ID do estilo (ex: notion)'
+                    }
+                },
+                required: ['id']
+            }
         },
     ]
 }))
@@ -223,6 +241,52 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             Object.entries(colorSystem.states).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
 
         return { content: [{ type: 'text', text: sections.join('\n\n') }] }
+    }
+
+    // ── buscar_estilo ───────────────────────────────────────────────────────
+    if (name === 'buscar_estilo') {
+        const id = args?.id?.toLowerCase()
+        const style = styles[id]
+
+        if (!style) {
+            return {
+                content: [{
+                    type: 'text',
+                    text: `Estilo "${id}" não encontrado.\n\nDisponíveis: ${Object.keys(styles).join(', ')}`
+                }]
+            }
+        }
+
+        const sections = []
+
+        sections.push(`# ${style.name} — ${style.file}`)
+        sections.push(style.description)
+
+        if (style.philosophy) sections.push(`\n## Filosofia\n${style.philosophy}`)
+        if (style.usage)      sections.push(`\n## Como usar\n${style.usage}`)
+
+        if (style.borderRadius) {
+            sections.push(`\n## Border Radius\n` +
+                Object.entries(style.borderRadius).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
+        }
+
+        if (style.supportedComponents) {
+            sections.push(`\n## Componentes suportados\n` +
+                style.supportedComponents.map(c => `• ${c}`).join('\n'))
+        }
+
+        if (style.notes) {
+            sections.push(`\n## Notas\n` + style.notes.map(n => `• ${n}`).join('\n'))
+        }
+
+        if (style.examples) {
+            sections.push(`\n## Exemplos`)
+            Object.entries(style.examples).forEach(([k, v]) => {
+                sections.push(`\n### ${k}\n\`\`\`html${v}\`\`\``)
+            })
+        }
+
+        return { content: [{ type: 'text', text: sections.join('\n') }] }
     }
 
     return {
