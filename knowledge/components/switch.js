@@ -11,7 +11,7 @@ module.exports = {
               background-color-auto-11-active border-color-auto-11-active
               piece-primary">
     <span class="piece-indicator piece-surface background-color-auto-12 background-color-auto-00-active"></span>
-    <input type="checkbox" class="piece-controller">
+    <input type="checkbox">
 </label>
 
 <!-- Com ícones -->
@@ -23,7 +23,7 @@ module.exports = {
         <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
         <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-11" translate="no">check</span>
     </span>
-    <input type="checkbox" class="piece-controller">
+    <input type="checkbox">
 </label>`,
 
     requiredClasses: ["piece-switch", "piece-surface"],
@@ -46,7 +46,8 @@ Com apenas piece-true (ícone só no estado on):
   - ON:  24×24px com ícone`,
 
     notes: [
-        "O input[type=checkbox] deve ser filho direto do .piece-switch",
+        "O input[type=checkbox] deve ser filho direto do .piece-switch — SEM a classe piece-controller",
+        "Diferente de checkbox/radio/button, o switch usa input simples (opacity:0, position:absolute) — não piece-controller",
         "O input fica invisível mas ocupa 100% da área — é ele que recebe o clique",
         "piece-false e piece-true dentro do .piece-indicator controlam qual ícone aparece",
         "Usa border-style: solid + border-width: 2px — sempre defina border-color",
@@ -61,7 +62,7 @@ Com apenas piece-true (ícone só no estado on):
               piece-primary">
     <span class="piece-indicator piece-surface
                  background-color-auto-12 background-color-auto-00-active"></span>
-    <input type="checkbox" class="piece-controller">
+    <input type="checkbox">
 </label>`,
 
         withIcons: `
@@ -74,7 +75,7 @@ Com apenas piece-true (ícone só no estado on):
         <span class="material-symbols-rounded piece-icon piece-false text-color-auto-12" translate="no">close</span>
         <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-00" translate="no">check</span>
     </span>
-    <input type="checkbox" class="piece-controller">
+    <input type="checkbox">
 </label>`,
     }
 }
