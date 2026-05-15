@@ -6,7 +6,7 @@ module.exports = {
 
     structure: `
 <!-- Sem ícone -->
-<div class="piece-switch piece-surface piece-primary
+<div class="piece-switch piece-surface
             background-color-auto-04 background-color-auto-05-hover
             background-color-auto-11-active background-color-auto-12-active-hover
             border-color-auto-08 border-color-auto-11-active
@@ -16,17 +16,18 @@ module.exports = {
                  background-color-auto-12 background-color-auto-00-active"></span>
 </div>
 
-<!-- Com ícones -->
-<div class="piece-switch piece-surface piece-primary
+<!-- Com ícones — cor definida no container, não nos ícones -->
+<div class="piece-switch piece-surface
             background-color-auto-04 background-color-auto-05-hover
             background-color-auto-11-active background-color-auto-12-active-hover
             border-color-auto-08 border-color-auto-11-active
-            ripple-to-fg ripple-to-accent-active">
+            ripple-to-fg ripple-to-accent-active
+            text-color-light-00 text-color-light-11-active">
     <input type="checkbox" class="piece-controller">
     <span class="piece-indicator piece-surface piece-parent
                  background-color-auto-12 background-color-auto-00-active">
-        <span class="material-symbols-rounded piece-icon piece-false text-color-auto-04" translate="no">close</span>
-        <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-11" translate="no">check</span>
+        <span class="material-symbols-rounded piece-icon piece-false" translate="no">close</span>
+        <span class="material-symbols-rounded piece-icon piece-true"  translate="no">check</span>
     </span>
 </div>`,
 
@@ -52,30 +53,50 @@ Com apenas piece-true (ícone só no estado ON):
     iconVariants: `
 Existem 4 variantes de ícone — todos vão dentro do .piece-indicator:
 
+A cor dos ícones NÃO é definida nos próprios spans — ela vem do container piece-switch via:
+  text-color-light-00 text-color-light-11-active
+Os ícones herdam a cor do pai automaticamente.
+
 ── Nenhum ─────────────────────────────────────────────────────────────────────
-<span class="piece-indicator piece-surface piece-parent
-             background-color-auto-12 background-color-auto-00-active"></span>
+<div class="piece-switch piece-surface ...
+            text-color-light-00 text-color-light-11-active">
+    <input type="checkbox" class="piece-controller">
+    <span class="piece-indicator piece-surface piece-parent
+                 background-color-auto-12 background-color-auto-00-active"></span>
+</div>
 
 ── Só ON (piece-true) ─────────────────────────────────────────────────────────
 Indicador pequeno no OFF, grande no ON com ícone.
-<span class="piece-indicator piece-surface piece-parent
-             background-color-auto-12 background-color-auto-00-active">
-    <span class="material-symbols-rounded piece-icon piece-true text-color-auto-11" translate="no">check</span>
-</span>
+<div class="piece-switch piece-surface ...
+            text-color-light-00 text-color-light-11-active">
+    <input type="checkbox" class="piece-controller">
+    <span class="piece-indicator piece-surface piece-parent
+                 background-color-auto-12 background-color-auto-00-active">
+        <span class="material-symbols-rounded piece-icon piece-true" translate="no">check</span>
+    </span>
+</div>
 
 ── Só OFF (piece-false) ───────────────────────────────────────────────────────
 Indicador já começa grande no OFF (sinaliza que há ação).
-<span class="piece-indicator piece-surface piece-parent
-             background-color-auto-12 background-color-auto-00-active">
-    <span class="material-symbols-rounded piece-icon piece-false text-color-auto-04" translate="no">close</span>
-</span>
+<div class="piece-switch piece-surface ...
+            text-color-light-00 text-color-light-11-active">
+    <input type="checkbox" class="piece-controller">
+    <span class="piece-indicator piece-surface piece-parent
+                 background-color-auto-12 background-color-auto-00-active">
+        <span class="material-symbols-rounded piece-icon piece-false" translate="no">close</span>
+    </span>
+</div>
 
 ── Ambos ──────────────────────────────────────────────────────────────────────
-<span class="piece-indicator piece-surface piece-parent
-             background-color-auto-12 background-color-auto-00-active">
-    <span class="material-symbols-rounded piece-icon piece-false text-color-auto-04" translate="no">close</span>
-    <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-11" translate="no">check</span>
-</span>`,
+<div class="piece-switch piece-surface ...
+            text-color-light-00 text-color-light-11-active">
+    <input type="checkbox" class="piece-controller">
+    <span class="piece-indicator piece-surface piece-parent
+                 background-color-auto-12 background-color-auto-00-active">
+        <span class="material-symbols-rounded piece-icon piece-false" translate="no">close</span>
+        <span class="material-symbols-rounded piece-icon piece-true"  translate="no">check</span>
+    </span>
+</div>`,
 
     notes: [
         "Usa <div> como raiz — não <label> nem <button>",
@@ -86,6 +107,7 @@ Indicador já começa grande no OFF (sinaliza que há ação).
         "ripple-to-fg e ripple-to-accent-active controlam a cor do ripple em cada estado",
         "background-color-auto-05-hover = hover no estado OFF | background-color-auto-12-active-hover = hover no estado ON",
         "piece-false e piece-true dentro do .piece-indicator controlam qual ícone aparece",
+        "Ícones NÃO recebem text-color diretamente — a cor vem do container: text-color-light-00 (OFF) e text-color-light-11-active (ON)",
         "Usa border-style: solid + border-width: 2px — sempre defina border-color",
         "Transições com cubic-bezier(0.2,0,0,1) — animação suave e física",
     ],
@@ -118,12 +140,13 @@ Indicador já começa grande no OFF (sinaliza que há ação).
             background-color-auto-04 background-color-auto-05-hover
             background-color-auto-11-active background-color-auto-12-active-hover
             border-color-auto-08 border-color-auto-11-active
-            ripple-to-fg ripple-to-accent-active">
+            ripple-to-fg ripple-to-accent-active
+            text-color-light-00 text-color-light-11-active">
     <input type="checkbox" class="piece-controller">
     <span class="piece-indicator piece-surface piece-parent
                  background-color-auto-12 background-color-auto-00-active">
-        <span class="material-symbols-rounded piece-icon piece-false text-color-auto-04" translate="no">close</span>
-        <span class="material-symbols-rounded piece-icon piece-true  text-color-auto-11" translate="no">check</span>
+        <span class="material-symbols-rounded piece-icon piece-false" translate="no">close</span>
+        <span class="material-symbols-rounded piece-icon piece-true"  translate="no">check</span>
     </span>
 </div>`,
     }
