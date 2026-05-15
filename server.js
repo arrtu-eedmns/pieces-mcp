@@ -231,6 +231,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         sections.push(`# Pieces — Sistema de Cores\n${colorSystem.overview}`)
 
+        sections.push(`## ⚠️ Tema — OBRIGATÓRIO\n${colorSystem.theme.description}\n\n**Classes:**\n` +
+            Object.entries(colorSystem.theme.classes).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n') +
+            `\n\n**Como funciona:**\n${colorSystem.theme.howItWorks}` +
+            `\n\n**Uso:**\n\`\`\`html${colorSystem.theme.usage}\`\`\`` +
+            `\n\n**Notas:**\n` + colorSystem.theme.notes.map(n => `• ${n}`).join('\n'))
+
         sections.push(`## Surface\n${colorSystem.surface.description}\n\n**Modificadores:**\n` +
             Object.entries(colorSystem.surface.modifiers).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
 

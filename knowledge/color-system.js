@@ -12,6 +12,57 @@ Cada elemento filho que também for .piece-surface reseta os tokens
 automaticamente, criando uma hierarquia de superfícies independentes.
 `,
 
+    theme: {
+        description: `
+OBRIGATÓRIO: piece-light ou piece-dark deve estar no elemento raiz (body ou html).
+Sem um deles, as variáveis --piece-theme e --piece-theme-operator ficam indefinidas
+e NENHUMA classe de cor funciona — tudo fica transparente/sem cor.`,
+
+        classes: {
+            "piece-light": "Tema claro — token 00 = branco, token 25 = preto. Adicionar no <body> ou <html>.",
+            "piece-dark":  "Tema escuro — token 00 = preto, token 25 = branco. Adicionar no <body> ou <html>.",
+        },
+
+        howItWorks: `
+piece-light define:
+  --piece-theme: 100%               ← base de cálculo para tokens auto
+  --piece-theme-inverse: 0%
+  --piece-theme-operator: -         ← subtrai o token (claro fica mais escuro conforme token sobe)
+  --piece-theme-operator-inverse: +
+
+piece-dark define:
+  --piece-theme: 0%
+  --piece-theme-inverse: 100%
+  --piece-theme-operator: +         ← soma o token (escuro fica mais claro conforme token sobe)
+  --piece-theme-operator-inverse: -
+
+Exemplo com background-color-auto-04 (token 04 = 16%):
+  piece-light → calc(100% - 16%) = 84% lightness  (quase branco)
+  piece-dark  → calc(0%   + 16%) = 16% lightness  (quase preto)`,
+
+        usage: `
+<!-- Tema claro fixo -->
+<body class="piece-light">
+
+<!-- Tema escuro fixo -->
+<body class="piece-dark">
+
+<!-- Trocar tema via JS -->
+document.body.classList.toggle('piece-light')
+document.body.classList.toggle('piece-dark')
+
+<!-- Seguir preferência do sistema -->
+const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+document.body.classList.add(dark ? 'piece-dark' : 'piece-light')`,
+
+        notes: [
+            "Sem piece-light ou piece-dark no body, NENHUMA cor funciona",
+            "Pode ser aplicado em qualquer container, não só no body — cria um sub-tema",
+            "piece-light e piece-dark podem coexistir em elementos diferentes na mesma página",
+            "O tema escuro NO CSS do pieces usa MPSO como classe no html (legado) — piece-dark é o correto",
+        ]
+    },
+
     surface: {
         description: "Classe base obrigatória. Propaga todas as variáveis de cor, alpha e blur.",
         required: true,
