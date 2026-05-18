@@ -29,6 +29,7 @@ const components = {
     snackbar:          require('./knowledge/components/snackbar.js'),
     navigation:        require('./knowledge/components/navigation.js'),
     menu:              require('./knowledge/components/menu.js'),
+    groupButton:       require('./knowledge/components/group-button.js'),
     tooltip:           require('./knowledge/components/tooltip.js'),
     badge:             require('./knowledge/components/badge.js'),
     switch:            require('./knowledge/components/switch.js'),
