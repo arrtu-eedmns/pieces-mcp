@@ -24,25 +24,50 @@ module.exports = {
 
     requiredClasses: ["piece-icon-button", "piece-surface"],
 
+    variants: {
+        "piece-text":     "Fundo transparente fora do hover — o mais limpo",
+        "piece-outlined": "Borda 1px + fundo transparente fora do hover",
+        "piece-elevated": "Box-shadow sutil — usa box-shadow-color-auto-* para cor da sombra",
+        "(sem variant)":  "Standard — fundo explícito via background-color-auto-*",
+    },
+
     sizes: {
-        "piece-extra-small": "32×32px — ícone 20px, border-radius 16px",
-        "piece-small":       "40×40px — ícone 24px, border-radius 20px",
-        "piece-medium":      "56×56px — ícone 24px, border-radius 28px (padrão)",
-        "piece-large":       "96×96px — ícone 32px, border-radius 48px",
-        "piece-extra-large": "136×136px — ícone 40px, border-radius 68px",
+        md3: {
+            "piece-extra-small": "32×32px — ícone 20px",
+            "piece-small":       "40×40px — ícone 24px",
+            "piece-medium":      "56×56px — ícone 24px (padrão)",
+            "piece-large":       "96×96px — ícone 32px",
+            "piece-extra-large": "136×136px — ícone 40px",
+        },
+        neutral: {
+            "piece-extra-small": "24×24px — ícone 14px",
+            "piece-small":       "28×28px — ícone 16px",
+            "piece-medium":      "32×32px — ícone 18px",
+            "piece-large":       "40×40px — ícone 20px",
+            "piece-extra-large": "48×48px — ícone 22px",
+        },
     },
 
     widthModifiers: {
-        "piece-narrow": "Largura menor que a altura — cria botão mais estreito (ex: small narrow = 32px largura)",
-        "piece-wide":   "Largura maior que a altura — cria botão mais largo (ex: small wide = 52px largura)",
+        "piece-narrow": "Largura menor que a altura — cria botão mais estreito",
+        "piece-wide":   "Largura maior que a altura — cria botão mais largo",
     },
 
     widthBySize: {
-        "piece-extra-small": { default: "32px", narrow: "28px", wide: "40px" },
-        "piece-small":       { default: "40px", narrow: "32px", wide: "52px" },
-        "piece-medium":      { default: "56px", narrow: "48px", wide: "72px" },
-        "piece-large":       { default: "96px", narrow: "64px", wide: "128px" },
-        "piece-extra-large": { default: "136px", narrow: "104px", wide: "184px" },
+        md3: {
+            "piece-extra-small": { default: "32px", narrow: "28px", wide: "40px" },
+            "piece-small":       { default: "40px", narrow: "32px", wide: "52px" },
+            "piece-medium":      { default: "56px", narrow: "48px", wide: "72px" },
+            "piece-large":       { default: "96px", narrow: "64px", wide: "128px" },
+            "piece-extra-large": { default: "136px", narrow: "104px", wide: "184px" },
+        },
+        neutral: {
+            "piece-extra-small": { default: "24px", narrow: "20px", wide: "32px" },
+            "piece-small":       { default: "28px", narrow: "24px", wide: "36px" },
+            "piece-medium":      { default: "32px", narrow: "28px", wide: "40px" },
+            "piece-large":       { default: "40px", narrow: "32px", wide: "52px" },
+            "piece-extra-large": { default: "48px", narrow: "40px", wide: "64px" },
+        },
     },
 
     toggleBehavior: `
