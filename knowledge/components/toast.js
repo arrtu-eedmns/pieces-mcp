@@ -5,7 +5,7 @@ module.exports = {
     description: "Notificação informativa simples. Centralizada na tela, sem ações. Use Snackbar quando precisar de botões.",
 
     structure: `
-<div class="piece-toast piece-surface background-color-inverse-00 text-color-inverse-25">
+<div class="piece-toast piece-surface">
     <span class="material-symbols-rounded piece-icon" translate="no">{icon}</span>  <!-- opcional -->
     <span class="piece-label">{mensagem}</span>
 </div>`,
@@ -39,13 +39,13 @@ Snackbar: pode ter botão de ação e fechar, fixado à esquerda, criado manualm
 
     examples: {
         withIcon: `
-<div class="piece-toast piece-surface background-color-inverse-00 text-color-inverse-25">
+<div class="piece-toast piece-surface">
     <span class="material-symbols-rounded piece-icon" translate="no">check_circle</span>
     <span class="piece-label">Salvo com sucesso!</span>
 </div>`,
 
         withoutIcon: `
-<div class="piece-toast piece-surface background-color-inverse-00 text-color-inverse-25">
+<div class="piece-toast piece-surface">
     <span class="piece-label">Conexão restaurada</span>
 </div>`,
 
