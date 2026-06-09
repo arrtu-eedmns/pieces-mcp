@@ -7,6 +7,18 @@ e tema do surface pai. Usa `.piece-toggle` + JS para estado; nunca usa checkbox 
 
 `<button>` — para ações de UI sem formulário.
 
+## Quando usar vs piece-radio / piece-checkbox
+
+| Situação | Componente correto |
+|---|---|
+| Seleção visual de UI (toolbar, filtro, view) sem submissão | `icon-button` + `piece-group` |
+| Valor precisa ir num `<form>` ou `FormData` — single-select | `piece-radio` |
+| Valor precisa ir num `<form>` ou `FormData` — multi-select | `piece-checkbox` |
+
+> **Regra prática:** se você não tem um `<form>` e não vai ler via `FormData`, use `icon-button`.
+> Exemplos de UI (icon-button): alinhamento de texto, negrito/itálico no editor, seleção de view, filtros visuais.
+> Exemplos de form (radio/checkbox): método de pagamento, canais de notificação salvos no perfil, permissões enviadas ao servidor.
+
 ## Estrutura mínima
 
 ```html

@@ -265,6 +265,22 @@ Use `.piece-disabled` — controlado pelo JS, que bloqueia eventos de interaçã
 **NUNCA use o atributo HTML `disabled`** em elementos com o sistema Pieces.
 O atributo `disabled` nativo quebra comportamentos já definidos pelo surface.
 
+### Regra para autores de kit — `:active` e `.piece-disabled`
+
+O pseudo-estado CSS `:active` é aplicado pelo browser no `mousedown`, antes de qualquer JS.
+Por isso, **todo seletor `:active` em CSS de kit deve ser guardado com `:not(.piece-disabled)`**
+para evitar reações visuais (ex: animação de indicador) em elementos desabilitados.
+
+```css
+/* ❌ Errado — dispara mesmo em disabled */
+&:active { ... }
+
+/* ✅ Correto */
+&:not(.piece-disabled):active { ... }
+```
+
+Isso se aplica a qualquer propriedade animada no `:active`: tamanho, margem, border-radius, etc.
+
 ---
 
 ## Alpha — .piece-{property}-alpha-{token}
@@ -486,6 +502,36 @@ O mesmo token, o mesmo elemento, aparências opostas — sem mudar nada no HTML.
 
 ---
 
+## Elementos livres e chrome de página
+
+⚠️ **Não existe elemento "fora do sistema" em contexto Pieces.**
+
+Ao criar qualquer elemento — seja um componente de kit, um badge numérico, um header
+de SPA, um wrapper de layout, um label auxiliar, qualquer coisa — se ele precisa de
+cor, texto, transparência ou qualquer propriedade visual, deve seguir as mesmas regras
+do surface. Não há exceção para "elementos de chrome", "decoração" ou "estrutura".
+
+**Regra:** se o elemento existe na página e tem aparência visual, usa `.piece-surface` + tokens.
+
+```html
+<!-- ERRADO — badge criado "livremente" fora do sistema -->
+<span style="background: currentColor; filter: invert(1); color: inherit;">1</span>
+
+<!-- ERRADO — header com opacity manual -->
+<h2 style="opacity: .4">Seção</h2>
+
+<!-- CORRETO — badge usando o sistema -->
+<span class="piece-surface background-color-auto-11 text-color-auto-00 ...">1</span>
+
+<!-- CORRETO — título secundário usando token -->
+<h2 class="piece-surface text-color-auto-14">Seção</h2>
+```
+
+Isso vale para qualquer elemento criado pela IA que não esteja documentado em nenhum kit:
+o sistema de tokens é a única linguagem de estilização permitida.
+
+---
+
 ## Resumo das regras absolutas
 
 | ❌ Nunca faça                               | ✅ Faça assim                                    |
@@ -495,8 +541,12 @@ O mesmo token, o mesmo elemento, aparências opostas — sem mudar nada no HTML.
 | `color: rgba(0,0,0,.4)` para texto fraco    | `piece-surface text-color-auto-14`               |
 | `filter: blur(8px)`                         | `piece-blur-04`                                  |
 | `backdrop-filter: blur()` no CSS            | `piece-blur-{token}`                             |
+| `filter: invert(1)` para inverter cor       | tokens de cor no elemento e no filho             |
+| `background: currentColor`                  | `background-color-{theme}-{token}`               |
+| `color: inherit` para forçar herança        | token explícito no elemento com `.piece-surface` |
 | `border-color: ...` manual                  | `border-color-{theme}-{token}`                   |
 | `border: 1px solid` (shorthand)             | `border-width: 1px; border-style: solid;`        |
 | `disabled="true"` em elementos Pieces       | `.piece-disabled` (controlado pelo JS)           |
 | Tokens em elemento sem `.piece-surface`     | Sempre ter `.piece-surface` no elemento          |
 | Labels/notas sem `.piece-surface`           | `<span class="piece-surface text-color-auto-16">` |
+| Elemento visual sem tokens (chrome "livre") | Todo elemento visual usa `.piece-surface` + tokens |
