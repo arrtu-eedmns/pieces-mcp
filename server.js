@@ -1,458 +1,435 @@
 #!/usr/bin/env node
-// ─── Pieces MCP Server ────────────────────────────────────────────────────────
-// Fornece conhecimento do design system "pieces" para IAs (Claude, etc.)
-// Protocolo: MCP via stdio
+/**
+ * Pieces MCP Server — stdio local, CommonJS
+ *
+ * Lê os arquivos do design system diretamente do filesystem.
+ * NUNCA faz chamadas HTTP. Sem loops, sem reconexões.
+ *
+ * Dependências em C:\pieces-mcp\node_modules (NODE_PATH no settings.json)
+ *
+ * Ferramentas expostas:
+ *   listar_componentes       — lista todos os arquivos CSS de componentes
+ *   buscar_componente        — retorna o CSS de um componente específico
+ *   buscar_core              — retorna pieces.css, theme.css ou surface.css
+ *   buscar_estilo            — busca uma classe ou regra CSS no design system
+ *   explicar_classe          — explica como usar uma classe do Pieces
+ *   sistema_de_cores         — documenta o sistema de cores HSL
+ */
 
-const { Server }   = require('@modelcontextprotocol/sdk/server/index.js')
-const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js')
-const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js')
+"use strict";
 
-// ─── Knowledge base ───────────────────────────────────────────────────────────
-const colorSystem = require('./knowledge/color-system.js')
+const { readFileSync, readdirSync, existsSync } = require("fs");
+const { join, extname }                         = require("path");
 
-const core = {
-    cssGenerator: require('./knowledge/core/css-generator.js'),
+const SDK_PATH = "C:/pieces-mcp/node_modules/@modelcontextprotocol/sdk/dist/cjs";
+
+const { Server }               = require(`${SDK_PATH}/server/index.js`);
+const { StdioServerTransport } = require(`${SDK_PATH}/server/stdio.js`);
+const {
+    CallToolRequestSchema,
+    ListToolsRequestSchema,
+} = require(`${SDK_PATH}/types.js`);
+
+/* ---------- CAMINHOS ---------- */
+const SRC       = join(__dirname, "..", "..", "src");
+const CSS_DIR   = join(SRC, "css", "pieces");
+const JS_DIR    = join(SRC, "js", "pieces");
+const KITS_DIR  = __dirname;               // pieces/mcp/
+const CORE_DIR  = join(__dirname, "core"); // pieces/mcp/core/
+const KITS_SKIP = new Set(["core", "node_modules"]);
+
+const CORE_FILES = ["pieces.css", "theme.css", "surface.css"];
+
+/* ---------- CACHE (carregado uma vez na inicialização) ---------- */
+const cssCache = new Map();
+const jsCache  = new Map();
+
+for (const file of readdirSync(CSS_DIR)) {
+    if (extname(file) === ".css") cssCache.set(file, readFileSync(join(CSS_DIR, file), "utf8"));
+}
+for (const file of readdirSync(JS_DIR)) {
+    if (extname(file) === ".js")  jsCache.set(file,  readFileSync(join(JS_DIR,  file), "utf8"));
 }
 
-const styles = {
-    notion: require('./knowledge/styles/notion.js'),
-}
+/* ---------- HELPERS ---------- */
+const text = content  => ({ content: [{ type: "text", text: content }] });
+const err  = msg      => ({ content: [{ type: "text", text: `Erro: ${msg}` }], isError: true });
 
-const components = {
-    surface:           require('./knowledge/components/surface.js'),
-    button:            require('./knowledge/components/button.js'),
-    iconButton:        require('./knowledge/components/icon-button.js'),
-    fab:               require('./knowledge/components/fab.js'),
-    fabMenu:           require('./knowledge/components/fab-menu.js'),
-    splitButton:       require('./knowledge/components/split-button.js'),
-    toast:             require('./knowledge/components/toast.js'),
-    snackbar:          require('./knowledge/components/snackbar.js'),
-    navigation:        require('./knowledge/components/navigation.js'),
-    menu:              require('./knowledge/components/menu.js'),
-    groupButton:       require('./knowledge/components/group-button.js'),
-    tooltip:           require('./knowledge/components/tooltip.js'),
-    badge:             require('./knowledge/components/badge.js'),
-    switch:            require('./knowledge/components/switch.js'),
-    checkbox:          require('./knowledge/components/checkbox.js'),
-    radio:             require('./knowledge/components/radio.js'),
-    textField:         require('./knowledge/components/text-field.js'),
-    textarea:          require('./knowledge/components/textarea.js'),
-    progressIndicator: require('./knowledge/components/progress-indicator.js'),
-    divider:           require('./knowledge/components/divider.js'),
-    table:             require('./knowledge/components/table.js'),
-    toolbar:           require('./knowledge/components/toolbar.js'),
-}
-
-// ─── Server ───────────────────────────────────────────────────────────────────
+/* ---------- SERVER ---------- */
 const server = new Server(
-    { name: 'pieces-mcp', version: '1.0.0' },
+    { name: "pieces", version: "1.0.0" },
     { capabilities: { tools: {} } }
-)
+);
 
-// ─── Lista de ferramentas ─────────────────────────────────────────────────────
+/* ---------- LISTA DE FERRAMENTAS ---------- */
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
         {
-            name: 'listar_componentes',
-            description: 'Lista todos os componentes disponíveis no design system pieces com uma breve descrição de cada um.',
-            inputSchema: { type: 'object', properties: {} }
+            name: "listar_componentes",
+            description: "Lista todos os componentes CSS disponíveis no Pieces Design System.",
+            inputSchema: { type: "object", properties: {}, required: [] },
         },
         {
-            name: 'buscar_componente',
-            description: 'Retorna documentação completa de um componente: estrutura HTML, classes obrigatórias, variantes, exemplos prontos e notas de uso.',
+            name: "buscar_componente",
+            description: "Retorna o CSS completo de um componente. Use o nome sem extensão (ex: 'button', 'card', 'text-field').",
             inputSchema: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'ID do componente (ex: button, fab, toast, snackbar, navigation, surface)'
-                    }
-                },
-                required: ['id']
-            }
+                type: "object",
+                properties: { nome: { type: "string", description: "Nome do componente (sem .css)" } },
+                required: ["nome"],
+            },
         },
         {
-            name: 'explicar_classe',
-            description: 'Explica o que uma classe CSS do pieces faz. Ex: background-color-auto-11, piece-blur-08, piece-primary, piece-surface.',
+            name: "buscar_core",
+            description: "Retorna um dos arquivos core: 'pieces' (entry + variáveis raiz), 'theme' (paletas de cor), ou 'surface' (classe base .piece-surface).",
             inputSchema: {
-                type: 'object',
+                type: "object",
                 properties: {
-                    classe: {
-                        type: 'string',
-                        description: 'Nome exato da classe CSS (ex: background-color-auto-11)'
-                    }
+                    arquivo: { type: "string", enum: ["pieces", "theme", "surface"], description: "Qual arquivo core retornar" },
                 },
-                required: ['classe']
-            }
+                required: ["arquivo"],
+            },
         },
         {
-            name: 'sistema_de_cores',
-            description: 'Retorna documentação completa do sistema de cores do pieces: tokens, surface, alpha, blur, temas, paletas e roles de cor.',
-            inputSchema: { type: 'object', properties: {} }
-        },
-        {
-            name: 'buscar_core',
-            description: 'Retorna documentação de arquivos core do pieces (ex: css-generator). Explica como funcionam os scripts fundamentais como o gerador de CSS dinâmico.',
+            name: "buscar_estilo",
+            description: "Busca uma string/classe/seletor CSS em todos os arquivos do Pieces. Retorna os trechos onde aparece.",
             inputSchema: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'ID do core (ex: css-generator)'
-                    }
-                },
-                required: ['id']
-            }
+                type: "object",
+                properties: { query: { type: "string", description: "Texto ou classe a buscar (ex: '.piece-button', 'piece-large')" } },
+                required: ["query"],
+            },
         },
         {
-            name: 'buscar_estilo',
-            description: 'Retorna documentação de um estilo/variante visual do pieces (ex: notion). Inclui quais componentes suporta, border-radius, exemplos prontos e notas.',
+            name: "explicar_classe",
+            description: "Explica o que uma classe do Pieces faz e como usá-la, com base no CSS-generator e nos arquivos fonte.",
             inputSchema: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'ID do estilo (ex: notion)'
-                    }
-                },
-                required: ['id']
-            }
+                type: "object",
+                properties: { classe: { type: "string", description: "Nome da classe (ex: 'background-color-auto-08', 'piece-blur-04')" } },
+                required: ["classe"],
+            },
         },
-    ]
-}))
+        {
+            name: "sistema_de_cores",
+            description: "PRÉ-REQUISITO — leia antes de qualquer kit ou componente. Documenta o surface, tokens (00-25), temas (auto/light/dark/inverse), canais, harmonias, alpha, blur e todas as regras do sistema Pieces.",
+            inputSchema: { type: "object", properties: {}, required: [] },
+        },
+        {
+            name: "sistema_js",
+            description: "PRÉ-REQUISITO — leia antes de usar componentes. Documenta todos os JS do Core: ripple, disabled, interactive, toggle, tooltip, piece-css-generator. Responsabilidades, classes HTML e regras.",
+            inputSchema: { type: "object", properties: {}, required: [] },
+        },
+        {
+            name: "listar_kit",
+            description: "Lista os kits disponíveis (sem parâmetro) ou os componentes de um kit específico (ex: 'neutral', 'md3').",
+            inputSchema: {
+                type: "object",
+                properties: { kit: { type: "string", description: "Nome do kit (opcional). Sem valor lista todos os kits." } },
+                required: [],
+            },
+        },
+        {
+            name: "componente",
+            description: "Retorna a documentação completa de um componente de um kit. Ex: kit='neutral', nome='icon-button'.",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    kit:  { type: "string", description: "Nome do kit (ex: neutral, md3, fluent)" },
+                    nome: { type: "string", description: "Nome do componente (ex: icon-button, radio, checkbox)" },
+                },
+                required: ["kit", "nome"],
+            },
+        },
+    ],
+}));
 
-// ─── Handlers ─────────────────────────────────────────────────────────────────
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params
+/* ---------- HANDLERS ---------- */
+server.setRequestHandler(CallToolRequestSchema, async (req) => {
+    const { name, arguments: args = {} } = req.params;
 
-    // ── listar_componentes ──────────────────────────────────────────────────
-    if (name === 'listar_componentes') {
-        const lista = Object.values(components).map(c =>
-            `• ${c.id} (${c.file}) — ${c.description}`
-        ).join('\n')
-
-        return {
-            content: [{
-                type: 'text',
-                text: `Componentes disponíveis no pieces:\n\n${lista}\n\n` +
-                      `Use buscar_componente com o ID para ver HTML, classes e exemplos.\n` +
-                      `Use sistema_de_cores para entender o sistema de tokens que todos compartilham.`
-            }]
-        }
+    /* ---- listar_componentes ---- */
+    if (name === "listar_componentes") {
+        const css = [...cssCache.keys()].sort();
+        const js  = [...jsCache.keys()].sort();
+        const out = [
+            "## CSS — Componentes",
+            ...css.map(f => `- ${f.replace(".css", "")}`),
+            "",
+            "## JS — Utilitários",
+            ...js.map(f => `- ${f.replace(".js", "")}`),
+        ].join("\n");
+        return text(out);
     }
 
-    // ── buscar_componente ───────────────────────────────────────────────────
-    if (name === 'buscar_componente') {
-        const id = args?.id?.toLowerCase().replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-        const comp = components[id]
+    /* ---- buscar_componente ---- */
+    if (name === "buscar_componente") {
+        const key = args.nome.endsWith(".css") ? args.nome : `${args.nome}.css`;
+        if (!cssCache.has(key)) {
+            const available = [...cssCache.keys()].map(f => f.replace(".css", "")).join(", ");
+            return err(`Componente "${args.nome}" não encontrado.\nDisponíveis: ${available}`);
+        }
+        return text(`/* ${key} */\n\n${cssCache.get(key)}`);
+    }
 
-        if (!comp) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: `Componente "${id}" não encontrado.\n\nDisponíveis: ${Object.keys(components).join(', ')}`
-                }]
+    /* ---- buscar_core ---- */
+    if (name === "buscar_core") {
+        const key = `${args.arquivo}.css`;
+        if (!CORE_FILES.includes(key)) return err("arquivo deve ser 'pieces', 'theme' ou 'surface'.");
+        if (!cssCache.has(key))        return err(`${key} não encontrado no cache.`);
+        return text(`/* ${key} */\n\n${cssCache.get(key)}`);
+    }
+
+    /* ---- buscar_estilo ---- */
+    if (name === "buscar_estilo") {
+        const { query } = args;
+        const results = [];
+        for (const [file, content] of cssCache) {
+            const lines = content.split("\n");
+            const matches = [];
+            lines.forEach((line, i) => {
+                if (line.toLowerCase().includes(query.toLowerCase())) {
+                    const start   = Math.max(0, i - 2);
+                    const end     = Math.min(lines.length - 1, i + 3);
+                    const snippet = lines.slice(start, end + 1).map((l, idx) => `${start + idx + 1}: ${l}`).join("\n");
+                    matches.push(snippet);
+                }
+            });
+            if (matches.length > 0) results.push(`### ${file}\n\`\`\`css\n${matches.join("\n---\n")}\n\`\`\``);
+        }
+        if (results.length === 0) return text(`Nenhum resultado para "${query}".`);
+        return text(`## Resultados para "${query}"\n\n${results.join("\n\n")}`);
+    }
+
+    /* ---- explicar_classe ---- */
+    if (name === "explicar_classe") {
+        const { classe } = args;
+
+        const colorMatch = classe.match(
+            /^(?<property>background|text|border|box-shadow|ripple|scrollbar-[\w-]+)-color-(?<theme>auto|light|dark|inverse)-(?<token>[\d]+)(?:-(?<suffix>hover|active|hover-active|loading))?$/
+        );
+        const alphaMatch = classe.match(
+            /^piece-(?<property>background|text|border|box-shadow|ripple|scrollbar-[\w-]+)-alpha-(?<token>\d{2})(?:-(?<suffix>hover|active|hover-active|loading))?$/
+        );
+        const blurMatch = classe.match(
+            /^piece-blur-(?<token>\d{2})(?:-(?<suffix>hover|active|hover-active|loading))?$/
+        );
+
+        if (colorMatch) {
+            const { property, theme, token, suffix } = colorMatch.groups;
+            const n = Number(token);
+            const lightness = n * 4;
+
+            const themeExplain = {
+                auto:    `Adapta ao tema global.\n  - No light: lightness = 100% − ${lightness}% = ${100 - lightness}%\n  - No dark:  lightness = 0% + ${lightness}% = ${lightness}%`,
+                inverse: `Inverte o tema atual.\n  - No light: age como dark (lightness = ${lightness}%)\n  - No dark:  age como light (lightness = ${100 - lightness}%)`,
+                light:   `Travado no esquema claro. Lightness = ${100 - lightness}% sempre, independente do tema global.`,
+                dark:    `Travado no esquema escuro. Lightness = ${lightness}% sempre, independente do tema global.`,
+            }[theme] || "";
+
+            const suffixExplain = {
+                undefined:      "Sempre aplicado (default).",
+                hover:          "Aplicado quando o mouse está sobre o elemento.",
+                active:         "Aplicado quando o elemento tem `.piece-actived` ou input está checked.",
+                "hover-active": "Aplicado quando tem `.piece-actived` E o mouse está sobre o elemento.",
+                loading:        "Aplicado quando está dentro de `.piece-loading-controller`.",
+            }[suffix] || "";
+
+            const pairNote = n % 2 === 0
+                ? `Token par — convenção: este é o estado **default**. O hover natural seria o token \`${String(n + 1).padStart(2, "0")}\`.`
+                : `Token ímpar — convenção: este é o estado **hover** do token \`${String(n - 1).padStart(2, "0")}\`.`;
+
+            return text([
+                `## Classe: \`${classe}\``,
+                "",
+                `**Tipo:** Cor de propriedade — gerada dinamicamente pelo piece-css-generator.js`,
+                `**Propriedade:** \`${property}\` → seta \`--piece-${property}-color\``,
+                `**Tema:** \`${theme}\` — ${themeExplain}`,
+                `**Token:** \`${token}\` → ${lightness}% de offset de lightness`,
+                `**Par de tokens:** ${pairNote}`,
+                suffix ? `**Estado:** ${suffixExplain}` : `**Estado:** default — ${suffixExplain}`,
+                "",
+                "**Requer:** \`.piece-surface\` no elemento.",
+                "",
+                "**Exemplo:**",
+                "```html",
+                `<div class="piece-surface ${classe}">...</div>`,
+                "```",
+                "",
+                "**Todos os estados desta classe:**",
+                `- \`${property}-color-${theme}-${token}\` — default`,
+                `- \`${property}-color-${theme}-${token}-hover\` — hover`,
+                `- \`${property}-color-${theme}-${token}-active\` — .piece-actived`,
+                `- \`${property}-color-${theme}-${token}-hover-active\` — .piece-actived + hover`,
+            ].join("\n"));
+        }
+
+        if (alphaMatch) {
+            const { property, token, suffix } = alphaMatch.groups;
+            const alpha = (Number(token) * 4 / 100).toFixed(2);
+            const pct   = Number(token) * 4;
+
+            const suffixExplain = {
+                undefined:      "Sempre aplicado (default).",
+                hover:          "Aplicado quando o mouse está sobre o elemento.",
+                active:         "Aplicado quando o elemento tem `.piece-actived`.",
+                "hover-active": "Aplicado quando tem `.piece-actived` E o mouse está sobre o elemento.",
+            }[suffix] || "";
+
+            return text([
+                `## Classe: \`${classe}\``,
+                "",
+                `**Tipo:** Alpha de propriedade — controla o canal A do HSLA`,
+                `**Propriedade:** \`${property}\` → seta \`--piece-${property}-a\``,
+                `**Token:** \`${token}\` → alpha = \`${alpha}\` (${pct}% de opacidade)`,
+                suffix ? `**Estado:** ${suffixExplain}` : `**Estado:** default — ${suffixExplain}`,
+                "",
+                "**IMPORTANTE:** Nunca use `opacity:` no CSS para controlar transparência de cores.",
+                "O alpha por propriedade afeta apenas aquela cor, sem vazar para filhos ou texto.",
+                "",
+                "**Requer:** \`.piece-surface\` no elemento.",
+                "",
+                "**Exemplo:**",
+                "```html",
+                `<div class="piece-surface background-color-auto-02 ${classe}">`,
+                `  <!-- fundo com ${pct}% de opacidade -->`,
+                `</div>`,
+                "```",
+            ].join("\n"));
+        }
+
+        if (blurMatch) {
+            const { token, suffix } = blurMatch.groups;
+            const px = Number(token) * 2;
+
+            return text([
+                `## Classe: \`${classe}\``,
+                "",
+                `**Tipo:** Blur de backdrop — aplica blur no background do elemento`,
+                `**Token:** \`${token}\` → \`blur(${px}px)\` via backdrop-filter`,
+                suffix ? `**Estado:** \`${suffix}\`` : "**Estado:** default",
+                "",
+                "**IMPORTANTE:** Nunca use `backdrop-filter` ou `filter: blur()` diretamente no CSS.",
+                "Use sempre a classe de token.",
+                "",
+                "⚠️ \`backdrop-filter\` cria um containing block. Elementos \`position: fixed\`",
+                "dentro deste elemento podem se comportar de forma inesperada.",
+                "",
+                "**Requer:** \`.piece-surface\` no elemento.",
+                "",
+                "**Exemplo típico (glass effect):**",
+                "```html",
+                `<div class="piece-surface ${classe} piece-background-alpha-04">`,
+                `  <!-- blur(${px}px) com fundo semi-transparente -->`,
+                `</div>`,
+                "```",
+            ].join("\n"));
+        }
+
+        const inFiles = [...cssCache.keys()].filter(f => cssCache.get(f).includes(classe));
+        if (inFiles.length > 0) {
+            return text(`## Classe: \`${classe}\`\nEncontrada em: ${inFiles.join(", ")}\n\nUse \`buscar_estilo\` para ver o CSS completo.`);
+        }
+
+        return text([
+            `## Classe: \`${classe}\``,
+            "",
+            "Não reconhecida como classe do CSS Generator nem encontrada nos arquivos fonte.",
+            "",
+            "**Padrões válidos:**",
+            "- Cor:   `{property}-color-{auto|light|dark|inverse}-{00–25}[-hover|-active|-hover-active]`",
+            "- Alpha: `piece-{property}-alpha-{00–25}[-hover|-active|-hover-active]`",
+            "- Blur:  `piece-blur-{00–25}[-hover|-active|-hover-active]`",
+            "",
+            "**Propriedades suportadas:** background, text, border, box-shadow, ripple,",
+            "scrollbar-track-outline, scrollbar-thumb-background, scrollbar-thumb-border",
+        ].join("\n"));
+    }
+
+    /* ---- sistema_de_cores ---- */
+    if (name === "sistema_de_cores") {
+        const f = join(CORE_DIR, "surface.md");
+        if (!existsSync(f)) return err("core/surface.md não encontrado.");
+        return text(readFileSync(f, "utf8"));
+    }
+
+    /* ---- sistema_js ---- */
+    if (name === "sistema_js") {
+        const f = join(CORE_DIR, "js.md");
+        if (!existsSync(f)) return err("core/js.md não encontrado.");
+        return text(readFileSync(f, "utf8"));
+    }
+
+    /* ---- listar_kit ---- */
+    if (name === "listar_kit") {
+        const { kit } = args;
+
+        if (!kit) {
+            const kits = readdirSync(KITS_DIR, { withFileTypes: true })
+                .filter(d => d.isDirectory() && !KITS_SKIP.has(d.name))
+                .map(d => d.name);
+            if (kits.length === 0) return text("Nenhum kit encontrado.");
+            return text(`## Kits disponíveis\n\n${kits.map(k => `- ${k}`).join("\n")}\n\nUse \`listar_kit(kit: "...")\` para ver os componentes de um kit.`);
+        }
+
+        const kitPath      = join(KITS_DIR, kit);
+        const compPath     = join(kitPath, "components");
+        const guidelinesFile = join(kitPath, "guidelines.md");
+
+        if (!existsSync(kitPath)) return err(`Kit "${kit}" não encontrado.`);
+
+        const lines = [`## ${kit}`];
+
+        if (existsSync(guidelinesFile)) {
+            lines.push("\n**Diretrizes disponíveis:** use `componente(kit, \"guidelines\")` para ler.");
+        }
+
+        if (existsSync(compPath)) {
+            const components = readdirSync(compPath)
+                .filter(f => f.endsWith(".md"))
+                .map(f => f.replace(".md", ""));
+            if (components.length > 0) {
+                lines.push(`\n### Componentes\n${components.map(c => `- ${c}`).join("\n")}`);
+                lines.push(`\nUse \`componente(kit: "${kit}", nome: "...")\` para ver a documentação.`);
+            } else {
+                lines.push("\nNenhum componente documentado ainda.");
             }
+        } else {
+            lines.push("\nPasta components/ não encontrada.");
         }
 
-        const sections = []
-
-        sections.push(`# ${comp.name} — ${comp.file}`)
-        sections.push(comp.description)
-
-        if (comp.structure) {
-            sections.push(`\n## Estrutura HTML\n\`\`\`html${comp.structure}\`\`\``)
-        }
-
-        if (comp.requiredClasses) {
-            sections.push(`\n## Classes obrigatórias\n${comp.requiredClasses.map(c => `• \`${c}\``).join('\n')}`)
-        }
-
-        if (comp.howItWorks) {
-            sections.push(`\n## Como funciona\n${comp.howItWorks}`)
-        }
-
-        if (comp.sizes) {
-            sections.push(`\n## Tamanhos\n${Object.entries(comp.sizes).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n')}`)
-        }
-
-        if (comp.variants) {
-            sections.push(`\n## Variantes`)
-            Object.entries(comp.variants).forEach(([k, v]) => {
-                sections.push(`\n### ${k}\n${v.description}\n\`\`\`html\n<button ${v.example}>\n    ...\n</button>\`\`\``)
-            })
-        }
-
-        if (comp.modifiers) {
-            sections.push(`\n## Modificadores\n${Object.entries(comp.modifiers).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n')}`)
-        }
-
-        if (comp.breakpoints) {
-            sections.push(`\n## Breakpoints\n${Object.entries(comp.breakpoints).map(([k,v]) => `• **${k}**: ${v}`).join('\n')}`)
-        }
-
-        if (comp.jsUtility) {
-            sections.push(`\n## Utilitário JS\n\`\`\`js${comp.jsUtility}\`\`\``)
-        }
-
-        if (comp.vsSnackbar || comp.vsToast) {
-            sections.push(`\n## Toast vs Snackbar\n${comp.vsSnackbar || comp.vsToast}`)
-        }
-
-        if (comp.notes) {
-            sections.push(`\n## Notas importantes\n${comp.notes.map(n => `• ${n}`).join('\n')}`)
-        }
-
-        if (comp.examples) {
-            sections.push(`\n## Exemplos prontos`)
-            Object.entries(comp.examples).forEach(([k, v]) => {
-                sections.push(`\n### ${k}\n\`\`\`html${v}\`\`\``)
-            })
-        }
-
-        return {
-            content: [{ type: 'text', text: sections.join('\n') }]
-        }
+        return text(lines.join("\n"));
     }
 
-    // ── explicar_classe ─────────────────────────────────────────────────────
-    if (name === 'explicar_classe') {
-        const cls = args?.classe?.trim()
-        if (!cls) {
-            return { content: [{ type: 'text', text: 'Informe o nome da classe.' }] }
+    /* ---- componente ---- */
+    if (name === "componente") {
+        const { kit, nome } = args;
+        const kitPath = join(KITS_DIR, kit);
+        if (!existsSync(kitPath)) return err(`Kit "${kit}" não encontrado.`);
+
+        // "guidelines" lê o arquivo raiz do kit
+        if (nome === "guidelines") {
+            const guidelinesFile = join(kitPath, "guidelines.md");
+            if (!existsSync(guidelinesFile)) return err(`Kit "${kit}" não possui guidelines.md.`);
+            return text(readFileSync(guidelinesFile, "utf8"));
         }
 
-        const explanation = explicarClasse(cls)
-        return { content: [{ type: 'text', text: explanation }] }
-    }
-
-    // ── sistema_de_cores ────────────────────────────────────────────────────
-    if (name === 'sistema_de_cores') {
-        const sections = []
-
-        sections.push(`# Pieces — Sistema de Cores\n${colorSystem.overview}`)
-
-        sections.push(`## ⚠️ Tema — OBRIGATÓRIO\n${colorSystem.theme.description}\n\n**Classes:**\n` +
-            Object.entries(colorSystem.theme.classes).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n') +
-            `\n\n**Como funciona:**\n${colorSystem.theme.howItWorks}` +
-            `\n\n**Uso:**\n\`\`\`html${colorSystem.theme.usage}\`\`\`` +
-            `\n\n**Notas:**\n` + colorSystem.theme.notes.map(n => `• ${n}`).join('\n'))
-
-        sections.push(`## Surface\n${colorSystem.surface.description}\n\n**Modificadores:**\n` +
-            Object.entries(colorSystem.surface.modifiers).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-
-        sections.push(`## Tokens de Cor\n${colorSystem.colorTokens.description}\n\n**Escala de tokens:**\n` +
-            Object.entries(colorSystem.colorTokens.scale).map(([k,v]) => `• token \`${k}\` → ${v}`).join('\n'))
-
-        sections.push(`\n**Padrões comuns:**\n` +
-            Object.entries(colorSystem.colorTokens.commonPatterns).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-
-        sections.push(`\n**Sufixos de estado:**\n` +
-            Object.entries(colorSystem.colorTokens.suffixes).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-
-        sections.push(`## Alpha\n${colorSystem.alphaTokens.description}\n\n**Exemplos:**\n` +
-            Object.entries(colorSystem.alphaTokens.examples).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-
-        sections.push(`## Blur\n${colorSystem.blurTokens.description}\n\n**Exemplos:**\n` +
-            Object.entries(colorSystem.blurTokens.examples).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-
-        sections.push(`## Paletas\n${colorSystem.palettes.description}\n\n` +
-            Object.entries(colorSystem.palettes.classes).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-
-        sections.push(`## Roles de Cor\n${colorSystem.colorRoles.description}\n\n` +
-            Object.entries(colorSystem.colorRoles.classes).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-
-        sections.push(`## Estados\n` +
-            Object.entries(colorSystem.states).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-
-        return { content: [{ type: 'text', text: sections.join('\n\n') }] }
-    }
-
-    // ── buscar_core ─────────────────────────────────────────────────────────
-    if (name === 'buscar_core') {
-        const id = args?.id?.toLowerCase().replace(/-([a-z])/g, (_, c) => c.toUpperCase())
-        const item = core[id]
-
-        if (!item) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: `Core "${args?.id}" não encontrado.\n\nDisponíveis: ${Object.keys(core).join(', ')}`
-                }]
-            }
+        // componentes ficam em kit/components/
+        const filePath = join(kitPath, "components", `${nome}.md`);
+        if (!existsSync(filePath)) {
+            const compPath = join(kitPath, "components");
+            const available = existsSync(compPath)
+                ? readdirSync(compPath).filter(f => f.endsWith(".md")).map(f => f.replace(".md", ""))
+                : [];
+            return err(`Componente "${nome}" não encontrado no kit "${kit}".\nDisponíveis: ${available.join(", ") || "nenhum"}`);
         }
-
-        const sections = []
-        sections.push(`# ${item.name} — ${item.file}`)
-        sections.push(item.description)
-        if (item.howItWorks)        sections.push(`\n## Como funciona\n${item.howItWorks}`)
-        if (item.classPatterns)     sections.push(`\n## Padrões de classe\n` + Object.entries(item.classPatterns).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-        if (item.tokenResolution)   sections.push(`\n## Resolução de tokens\n${item.tokenResolution}`)
-        if (item.suffixes)          sections.push(`\n## Sufixos de estado\n${item.suffixes}`)
-        if (item.supportedProperties) sections.push(`\n## Propriedades suportadas\n` + item.supportedProperties.map(p => `• \`${p}\``).join('\n'))
-        if (item.installation)      sections.push(`\n## Instalação\n${item.installation}`)
-        if (item.notes)             sections.push(`\n## Notas\n` + item.notes.map(n => `• ${n}`).join('\n'))
-
-        return { content: [{ type: 'text', text: sections.join('\n') }] }
+        return text(readFileSync(filePath, "utf8"));
     }
 
-    // ── buscar_estilo ───────────────────────────────────────────────────────
-    if (name === 'buscar_estilo') {
-        const id = args?.id?.toLowerCase()
-        const style = styles[id]
+    return err(`Ferramenta desconhecida: ${name}`);
+});
 
-        if (!style) {
-            return {
-                content: [{
-                    type: 'text',
-                    text: `Estilo "${id}" não encontrado.\n\nDisponíveis: ${Object.keys(styles).join(', ')}`
-                }]
-            }
-        }
-
-        const sections = []
-
-        sections.push(`# ${style.name} — ${style.file}`)
-        sections.push(style.description)
-
-        if (style.philosophy) sections.push(`\n## Filosofia\n${style.philosophy}`)
-        if (style.usage)      sections.push(`\n## Como usar\n${style.usage}`)
-
-        if (style.borderRadius) {
-            sections.push(`\n## Border Radius\n` +
-                Object.entries(style.borderRadius).map(([k,v]) => `• \`${k}\` — ${v}`).join('\n'))
-        }
-
-        if (style.supportedComponents) {
-            sections.push(`\n## Componentes suportados\n` +
-                style.supportedComponents.map(c => `• ${c}`).join('\n'))
-        }
-
-        if (style.notes) {
-            sections.push(`\n## Notas\n` + style.notes.map(n => `• ${n}`).join('\n'))
-        }
-
-        if (style.examples) {
-            sections.push(`\n## Exemplos`)
-            Object.entries(style.examples).forEach(([k, v]) => {
-                sections.push(`\n### ${k}\n\`\`\`html${v}\`\`\``)
-            })
-        }
-
-        return { content: [{ type: 'text', text: sections.join('\n') }] }
-    }
-
-    return {
-        content: [{ type: 'text', text: `Ferramenta "${name}" não reconhecida.` }],
-        isError: true
-    }
-})
-
-// ─── Explicador de classes ─────────────────────────────────────────────────────
-function explicarClasse(cls) {
-
-    // background-color-auto-11, text-color-light-04, etc.
-    const colorMatch = cls.match(/^(?<prop>background|text|border|box-shadow|ripple|scrollbar[\w-]*)-color-(?<theme>auto|inverse|light|dark)-(?<token>\d+)(?:-(?<suffix>hover|active|hover-active|loading))?$/)
-    if (colorMatch) {
-        const { prop, theme, token, suffix } = colorMatch.groups
-        const lightness = Number(token) * 4
-        const themeDesc = {
-            auto:    `adapta ao tema (claro/escuro automaticamente)`,
-            inverse: `inverso do tema (escuro quando claro, claro quando escuro)`,
-            light:   `sempre claro (ignora o tema)`,
-            dark:    `sempre escuro (ignora o tema)`,
-        }[theme]
-        const suffixDesc = suffix ? `, ativado no estado: ${suffix}` : `, sempre ativo`
-        const tokenNote = Number(token) === 11 ? ` (tom de destaque — usa o HUE de piece-primary/secondary/tertiary)` : ''
-
-        return `\`${cls}\`\n\n` +
-            `**Propriedade:** ${prop}\n` +
-            `**Tema:** ${themeDesc}\n` +
-            `**Lightness:** ${lightness}% (token ${token} × 4)${tokenNote}\n` +
-            `**Quando ativo:** ${suffixDesc}\n\n` +
-            `Esta classe seta \`--piece-${prop}-color\` para que o hsla() do .piece-surface renderize a cor correta.`
-    }
-
-    // piece-background-alpha-11, piece-border-alpha-06, etc.
-    const alphaMatch = cls.match(/^piece-(?<prop>background|text|border|box-shadow|ripple|scrollbar[\w-]*)-alpha-(?<token>\d+)/)
-    if (alphaMatch) {
-        const { prop, token } = alphaMatch.groups
-        const alpha = (Number(token) * 4 / 100).toFixed(2)
-        return `\`${cls}\`\n\nDefine o alpha da propriedade **${prop}** para **${alpha}** (token ${token} × 4 / 100).\n\nUso típico: criar superfícies semi-transparentes. Ex: \`piece-background-alpha-11\` → fundo com 44% de opacidade.`
-    }
-
-    // piece-blur-08
-    const blurMatch = cls.match(/^piece-blur-(?<token>\d+)/)
-    if (blurMatch) {
-        const px = Number(blurMatch.groups.token) * 2
-        return `\`${cls}\`\n\nAplica \`backdrop-filter: blur(${px}px)\`.\n\nUso típico: painéis com efeito vidro/frosted glass. Requer que o elemento tenha um fundo semi-transparente para o blur ser visível.`
-    }
-
-    // piece-primary/secondary/tertiary
-    if (['piece-primary','piece-secondary','piece-tertiary'].includes(cls)) {
-        const desc = {
-            'piece-primary':   'HUE base definido por --piece-main-color',
-            'piece-secondary': 'HUE = primary + offset da paleta (ex: +120° no triádico)',
-            'piece-tertiary':  'HUE = secondary + offset da paleta',
-        }[cls]
-        return `\`${cls}\`\n\nDefine \`--piece-h\` para o HUE correspondente (${desc}).\n\nEsta classe muda a "identidade de cor" do elemento e de todos os seus filhos. Combine com \`background-color-auto-11\` para usar essa cor como destaque.`
-    }
-
-    // piece-surface
-    if (cls === 'piece-surface') {
-        return `\`piece-surface\`\n\nClasse base obrigatória do pieces.\n\n` +
-            `• Define background, color e border-color via variáveis CSS (hsla)\n` +
-            `• Cada filho .piece-surface reseta as vars automaticamente — não herda do pai\n` +
-            `• Ativa suporte a: alpha por propriedade, blur, skeleton, disabled, ripple\n` +
-            `• Todo componente do pieces começa com esta classe`
-    }
-
-    // piece-border
-    if (cls === 'piece-border') {
-        return `\`piece-border\`\n\nAtiva \`border: 1px solid\` usando a cor de borda configurada (via \`border-color-auto-XX\`).\n\nSempre combine com uma classe de cor de borda, ex: \`border-color-auto-06\`.`
-    }
-
-    // piece-disabled
-    if (cls === 'piece-disabled') {
-        return `\`piece-disabled\`\n\nEstado desabilitado.\n\n• Aplica fundo e texto cinza semi-transparente\n• \`pointer-events: none\` em todos os filhos\n• \`cursor: not-allowed\`\n\nPreferível ao atributo HTML \`disabled\` pois funciona em qualquer elemento, não só em inputs.`
-    }
-
-    // piece-ripple
-    if (cls === 'piece-ripple') {
-        return `\`piece-ripple\`\n\nContainer do efeito ripple. Deve ser o **último filho** do elemento clicável.\n\n\`\`\`html\n<button class="piece-button ...">\n    ...\n    <span class="piece-ripple"></span>  <!-- sempre último -->\n</button>\`\`\`\n\nO JS em \`ripple.js\` detecta cliques e cria o efeito automaticamente.`
-    }
-
-    // piece-actived
-    if (cls === 'piece-actived') {
-        return `\`piece-actived\`\n\nMarca o elemento como "ativo" manualmente via JS.\n\n• Ativa classes com sufixo \`-active\` e \`-hover-active\`\n• Equivalente ao estado \`:checked\` do piece-controller, mas controlado por JS\n• Usado em menus, tabs, botões toggle`
-    }
-
-    // piece-controller
-    if (cls === 'piece-controller') {
-        return `\`piece-controller\`\n\nInput (radio, checkbox, text) que controla o estado do elemento pai .piece-surface.\n\n• \`checked\` → ativa classes \`-active\` no pai\n• Deve ser filho direto do .piece-surface que controla\n• Compatível com \`piece-true\` e \`piece-false\` para mostrar/ocultar conteúdo`
-    }
-
-    // piece-icon
-    if (cls === 'piece-icon') {
-        return `\`piece-icon\`\n\nMarca um ícone Material Symbol dentro de um componente.\n\nEm componentes com \`piece-true\`/\`piece-false\`, o ícone pode ser ocultado/mostrado conforme o estado do piece-controller.`
-    }
-
-    // piece-label
-    if (cls === 'piece-label') {
-        return `\`piece-label\`\n\nTexto principal de um componente (botão, item de navegação, etc.).\n\nEm alguns componentes (ex: navigation rail compacto), o label é ocultado visualmente mas permanece acessível.`
-    }
-
-    return `\`${cls}\`\n\nClasse não reconhecida no knowledge base atual.\n\nDica: use \`sistema_de_cores\` para ver todos os tokens disponíveis, ou \`listar_componentes\` para ver os componentes documentados.`
-}
-
-// ─── Start ────────────────────────────────────────────────────────────────────
+/* ---------- START ---------- */
 async function main() {
-    const transport = new StdioServerTransport()
-    await server.connect(transport)
-    console.error('✅ Pieces MCP server rodando via stdio')
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
 }
 
-main().catch(err => {
-    console.error('❌ Erro fatal:', err)
-    process.exit(1)
-})
+main().catch(e => { process.stderr.write(e.message + "\n"); process.exit(1); });
