@@ -39,6 +39,7 @@ Adicione `.piece-toggle` — o `toggle.js` gerencia `.piece-actived` automaticam
 ## Com dois ícones (piece-true / piece-false)
 
 `piece-false` aparece quando inativo, `piece-true` quando `.piece-actived`.
+Comportamento gerenciado pelo core — não requer CSS adicional no componente.
 
 ```html
 <button class="piece-icon-button piece-toggle piece-surface ...">
@@ -47,6 +48,11 @@ Adicione `.piece-toggle` — o `toggle.js` gerencia `.piece-actived` automaticam
     <span class="material-symbols-rounded piece-icon piece-true">bookmark</span>
 </button>
 ```
+
+## Group
+
+Para agrupar icon-buttons (e misturar com buttons), use o componente `group`.
+Ver: [neutral/components/group.md](./group.md)
 
 ## Tamanhos
 
