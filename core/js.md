@@ -51,7 +51,7 @@ elemento.classList.remove('piece-disabled')
 **Responsabilidade:** abrir/fechar elementos interativos (dropdown, popover, menu).
 
 **Como funciona:** escuta `click` globalmente. Para cada `.piece-interactive`:
-- clique **dentro** → adiciona `.piece-actived` (abre)
+- clique **dentro** → alterna `.piece-actived` (abre se fechado, fecha se aberto)
 - clique **fora** → remove `.piece-actived` (fecha)
 - clique em `.piece-not-interactive` → força fechamento mesmo que seja filho
 
