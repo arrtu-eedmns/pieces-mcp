@@ -146,16 +146,27 @@ Use `sistema_de_cores` para documentação completa do sistema de tokens.
 
 ## Ordem de carregamento recomendada
 
+`piece-css-generator.js` deve ser carregado **sem `defer`**, antes dos demais scripts no `<head>`.
+Isso garante que o observer inicia imediatamente — observando `document.documentElement`
+antes mesmo do `<body>` existir — eliminando FOUC em MPA e SPA.
+
 ```html
-<script src="ripple.js"></script>
-<script src="disabled.js"></script>
-<script src="interactive.js"></script>
-<script src="toggle.js"></script>
-<script src="tooltip.js"></script>
-<script src="piece-css-generator.js"></script>
+<head>
+  <!-- 1. Gerador: blocking, sem defer — inicia o observer durante o parse do HTML -->
+  <script src="piece-css-generator.js"></script>
+
+  <!-- 2. Demais utilitários: defer — baixam em paralelo, executam após o parse -->
+  <script defer src="ripple.js"></script>
+  <script defer src="disabled.js"></script>
+  <script defer src="interactive.js"></script>
+  <script defer src="toggle.js"></script>
+  <script defer src="tooltip.js"></script>
+</head>
 ```
 
-Todos independentes — a ordem não tem dependências técnicas, apenas convenção.
+> **Por que blocking?** O observer de `piece-css-generator.js` dispara conforme o parser adiciona
+> elementos ao DOM. Se carregado com `defer`, executa só após o parse completo — os tokens CSS
+> chegariam tarde demais, causando flash de conteúdo sem estilo (FOUC).
 
 ---
 

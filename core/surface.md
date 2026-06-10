@@ -170,7 +170,7 @@ ou `text` em repouso e `tonal` ao passar o mouse. Os sufixos de estado
 ### Cores semânticas
 
 Pieces **não tem cores semânticas embutidas** (erro=vermelho, sucesso=verde, alerta=amarelo).
-Para casos que exigem uma cor específica, manipule `--piece-h` diretamente
+Para casos que exigem uma cor específica, manipule `--piece-base-h` diretamente
 no elemento ou num ancestral.
 
 ---
@@ -407,10 +407,18 @@ Canais controlam o **hue (H)** do HSLA. Trocando o canal, toda a cor do elemento
 e seus filhos muda de matiz, mantendo os mesmos tokens de lightness e alpha.
 
 ```css
-.piece-primary   → --piece-h = --piece-primary
-.piece-secondary → --piece-h = --piece-secondary
-.piece-tertiary  → --piece-h = --piece-tertiary
+/* --piece-base-h: matiz imutável, fonte de verdade das harmonias */
+/* --piece-h: canal ativo, atualizado pelas classes piece-primary/secondary/tertiary */
+
+.piece-primary   → --piece-h = var(--piece-primary)   /* lê de --piece-base-h via harmonia */
+.piece-secondary → --piece-h = var(--piece-secondary)
+.piece-tertiary  → --piece-h = var(--piece-tertiary)
 ```
+
+> **`--piece-base-h` vs `--piece-h`**: as harmonias (`.piece-triade`, `.piece-analoga` etc.)
+> leem `--piece-base-h` para calcular os canais. As classes de canal (`.piece-primary` etc.)
+> escrevem apenas `--piece-h`. Isso evita referência circular quando harmonia e canal estão
+> no mesmo elemento (ex: `<body class="piece-triade piece-primary">`).
 
 Essas classes são **herdadas de pai para filho**. Não é necessário repetir em cada
 elemento — declare apenas onde quiser mudar o canal.
